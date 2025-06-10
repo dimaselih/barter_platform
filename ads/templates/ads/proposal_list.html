@@ -1,0 +1,217 @@
+{% extends 'ads/base.html' %}
+
+{% block title %}Предложения обмена{% endblock %}
+
+{% block content %}
+<h2>Управление предложениями обмена</h2>
+
+<!-- Вкладки для переключения между полученными и отправленными -->
+<ul class="nav nav-tabs mb-4" id="proposalTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="received-tab" data-bs-toggle="tab" data-bs-target="#received" type="button" role="tab">
+            Полученные предложения 
+            {% if received_proposals %}
+                <span class="badge bg-primary">{{ received_proposals|length }}</span>
+            {% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="sent-tab" data-bs-toggle="tab" data-bs-target="#sent" type="button" role="tab">
+            Отправленные предложения
+            {% if sent_proposals %}
+                <span class="badge bg-secondary">{{ sent_proposals|length }}</span>
+            {% endif %}
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="proposalTabsContent">
+    <!-- Полученные предложения -->
+    <div class="tab-pane fade show active" id="received" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Предложения на ваши товары</h4>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#receivedFilters">
+                <i class="bi bi-funnel"></i> Фильтры
+            </button>
+        </div>
+        
+        <!-- Фильтры для полученных предложений -->
+        <div class="collapse mb-3" id="receivedFilters">
+            <div class="card card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Статус:</label>
+                        <select name="received_status" class="form-select">
+                            <option value="">Все статусы</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if value == received_status %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">От пользователя:</label>
+                        <input type="text" name="received_sender" class="form-control" 
+                               placeholder="Имя пользователя" value="{{ received_sender }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">Применить</button>
+                        <a href="{% url 'proposal_list' %}" class="btn btn-outline-secondary">Сбросить</a>
+                    </div>
+                    <!-- Сохраняем параметры отправленных предложений -->
+                    {% if sent_status %}<input type="hidden" name="sent_status" value="{{ sent_status }}">{% endif %}
+                    {% if sent_receiver %}<input type="hidden" name="sent_receiver" value="{{ sent_receiver }}">{% endif %}
+                </form>
+            </div>
+        </div>
+        
+        {% if received_proposals %}
+            <div class="row">
+                {% for proposal in received_proposals %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span class="badge bg-{% if proposal.status == 'pending' %}warning{% elif proposal.status == 'accepted' %}success{% else %}danger{% endif %}">
+                                    {{ proposal.get_status_display }}
+                                </span>
+                                <small class="text-muted">{{ proposal.created_at|date:"d.m.Y H:i" }}</small>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="card-title">От: {{ proposal.ad_sender.user.username }}</h6>
+                                <p class="card-text">
+                                    <strong>Предлагает:</strong> 
+                                    <a href="{% url 'ad_detail' proposal.ad_sender.pk %}">{{ proposal.ad_sender.title }}</a>
+                                </p>
+                                <p class="card-text">
+                                    <strong>За ваш товар:</strong> 
+                                    <a href="{% url 'ad_detail' proposal.ad_receiver.pk %}">{{ proposal.ad_receiver.title }}</a>
+                                </p>
+                                {% if proposal.comment %}
+                                    <p class="card-text">
+                                        <strong>Комментарий:</strong> {{ proposal.comment }}
+                                    </p>
+                                {% endif %}
+                                
+                                {% if proposal.status == 'pending' %}
+                                    <div class="btn-group w-100">
+                                        <form method="post" action="{% url 'proposal_update_status' proposal.pk %}" class="flex-fill">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="status" value="accepted">
+                                            <button type="submit" class="btn btn-success w-100">Принять</button>
+                                        </form>
+                                        <form method="post" action="{% url 'proposal_update_status' proposal.pk %}" class="flex-fill">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="status" value="rejected">
+                                            <button type="submit" class="btn btn-danger w-100">Отклонить</button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <p class="lead text-muted">Нет предложений по заданным критериям</p>
+                <a href="{% url 'ad_create' %}" class="btn btn-primary">Создать объявление</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Отправленные предложения -->
+    <div class="tab-pane fade" id="sent" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4>Ваши предложения обмена</h4>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#sentFilters">
+                <i class="bi bi-funnel"></i> Фильтры
+            </button>
+        </div>
+        
+        <!-- Фильтры для отправленных предложений -->
+        <div class="collapse mb-3" id="sentFilters">
+            <div class="card card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Статус:</label>
+                        <select name="sent_status" class="form-select">
+                            <option value="">Все статусы</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if value == sent_status %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Кому отправлено:</label>
+                        <input type="text" name="sent_receiver" class="form-control" 
+                               placeholder="Имя пользователя" value="{{ sent_receiver }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">Применить</button>
+                        <a href="{% url 'proposal_list' %}" class="btn btn-outline-secondary">Сбросить</a>
+                    </div>
+                    <!-- Сохраняем параметры полученных предложений -->
+                    {% if received_status %}<input type="hidden" name="received_status" value="{{ received_status }}">{% endif %}
+                    {% if received_sender %}<input type="hidden" name="received_sender" value="{{ received_sender }}">{% endif %}
+                </form>
+            </div>
+        </div>
+        
+        {% if sent_proposals %}
+            <div class="row">
+                {% for proposal in sent_proposals %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span class="badge bg-{% if proposal.status == 'pending' %}warning{% elif proposal.status == 'accepted' %}success{% else %}danger{% endif %}">
+                                    {{ proposal.get_status_display }}
+                                </span>
+                                <small class="text-muted">{{ proposal.created_at|date:"d.m.Y H:i" }}</small>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="card-title">Кому: {{ proposal.ad_receiver.user.username }}</h6>
+                                <p class="card-text">
+                                    <strong>Вы предлагаете:</strong> 
+                                    <a href="{% url 'ad_detail' proposal.ad_sender.pk %}">{{ proposal.ad_sender.title }}</a>
+                                </p>
+                                <p class="card-text">
+                                    <strong>За товар:</strong> 
+                                    <a href="{% url 'ad_detail' proposal.ad_receiver.pk %}">{{ proposal.ad_receiver.title }}</a>
+                                </p>
+                                {% if proposal.comment %}
+                                    <p class="card-text">
+                                        <strong>Ваш комментарий:</strong> {{ proposal.comment }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <p class="lead text-muted">Нет предложений по заданным критериям</p>
+                <a href="{% url 'ad_list' %}" class="btn btn-primary">Посмотреть объявления</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Сохраняем активную вкладку при обновлении страницы
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasReceivedFilters = urlParams.has('received_status') || urlParams.has('received_sender');
+    const hasSentFilters = urlParams.has('sent_status') || urlParams.has('sent_receiver');
+    
+    if (hasSentFilters && !hasReceivedFilters) {
+        // Переключаемся на вкладку отправленных, если есть только их фильтры
+        const sentTab = new bootstrap.Tab(document.getElementById('sent-tab'));
+        sentTab.show();
+    }
+});
+</script>
+{% endblock %}

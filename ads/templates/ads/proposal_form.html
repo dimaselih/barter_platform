@@ -1,0 +1,56 @@
+{% extends 'ads/base.html' %}
+
+{% block title %}Предложить обмен{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Предложить обмен</h2>
+                <h5>На объявление: {{ ad_receiver.title }}</h5>
+                
+                {% if ad_receiver.status != 'active' %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        Это объявление уже обменяно и недоступно для новых предложений.
+                    </div>
+                    <a href="{% url 'ad_detail' ad_receiver.pk %}" class="btn btn-secondary">Вернуться к объявлению</a>
+                {% elif not user_ads %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        У вас нет активных объявлений для обмена.
+                    </div>
+                    <a href="{% url 'ad_create' %}" class="btn btn-primary">Создать объявление</a>
+                {% else %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Выберите ваше объявление для обмена:</label>
+                            <select name="ad_sender" class="form-select" required>
+                                <option value="">Выберите объявление</option>
+                                {% for ad in user_ads %}
+                                    <option value="{{ ad.pk }}">{{ ad.title }} ({{ ad.get_condition_display }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        {% for field in form %}
+                            <div class="mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label">
+                                    {{ field.label }}
+                                </label>
+                                {{ field.errors }}
+                                {{ field }}
+                            </div>
+                        {% endfor %}
+                        
+                        <button type="submit" class="btn btn-primary">Отправить предложение</button>
+                        <a href="{% url 'ad_detail' ad_receiver.pk %}" class="btn btn-secondary">Отмена</a>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

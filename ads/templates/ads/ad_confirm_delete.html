@@ -1,0 +1,21 @@
+{% extends 'ads/base.html' %}
+
+{% block title %}Удаление объявления{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Удаление объявления</h2>
+                <p>Вы уверены, что хотите удалить объявление "{{ ad.title }}"?</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Да, удалить</button>
+                    <a href="{% url 'ad_detail' ad.pk %}" class="btn btn-secondary">Отмена</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
